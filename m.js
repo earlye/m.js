@@ -3,11 +3,61 @@ var m = {
     modules: { },
 
     _unique: (new Date()).getTime(),
-    
+
     assert: function( invariant, message ) {
         if (!invariant) {
             console.error(message);
             throw new Error(message);
+        }
+    },
+
+    makeAbsolute : function(url,relativeTo) {
+        console.log( "makeAbsolute:" + url + " relativeTo:" + relativeTo );
+
+        if ( relativeTo == undefined )
+        {
+            console.log( "relative to what?" );
+            return url;
+        }
+
+        if ( url.match( /^\// ) )
+        {
+            console.log( "the url is absolute." );
+            return url;
+        }
+
+        if ( url.match( /^https?:\/\// ))
+        {
+            console.log( "the url is *REALLY* absolute." );
+            return url;
+        }
+
+        var relativeToParts = relativeTo.split('/');
+        var urlParts = url.split('/');
+        relativeToParts.pop();
+        while( true )
+        {
+            console.log( "relativeToParts:" + JSON.stringify( relativeToParts ));
+            console.log( "urlParts:" + JSON.stringify( urlParts ));
+            if (urlParts[0] == "." )
+            {
+                urlParts.shift();
+                continue;
+            }
+            if (urlParts[0] == ".." )
+            {
+                urlParts.shift();
+                relativeToParts.pop();
+                continue;
+            }
+
+            var url = relativeToParts.concat(urlParts);
+            var result = url.join('/');
+
+            console.log( "result:" + result );
+            return result;
+
+            break;
         }
     },
 
@@ -37,8 +87,8 @@ var m = {
 
         var element = elements[0];
         this.src = element.src;
-        
-        this.loadModule("polyfills", "lib/m/polyfills.js", function() {
+
+        this.loadModule("polyfills", "polyfills.js?_=" + this._unique++, function() {
             this.modules.polyfills.initialize();
             //console.log( "loading main script" );
             var mainScript = element.attributes['main'].value;
@@ -50,19 +100,21 @@ var m = {
                 //console.log("initialized modules prior to running main:" + this.modulesJson() );
                 this.modules.main.main();
             }.bind(this))
-        }.bind(this));
+        }.bind(this), this.src);
     },
 
     isCallable: function( value ) { return typeof value === 'function'; },
 
-    loadModule: function( name, url , callback ) {
+    loadModule: function( name, url , callback , relativeToUrl ) {
         if ( this.modules[name] !== undefined ) {
             console.log( "module already exists:" + name );
             this.initModuleOnce(name,callback);
             return;
         }
 
+        url = this.makeAbsolute(url,relativeToUrl);
         console.log( "loading script:" + url );
+
         var head = document.getElementsByTagName('head');
         this.assert( head != undefined ,"Must have a <head> tag" );
         this.assert( head.length != 0, "Must have a <head> tag inside document.getElementsByTagName('head')" );
@@ -75,8 +127,8 @@ var m = {
             var module = this.modules[name];
             if (module === undefined) {
                 console.warn( name + ": script did not provide a module definition. " + url );
-                // If the script did not define a module, that's okay - it could just
-                this.modules[name] = { name: name , initialized : false };
+                // If the script did not define a module, that's okay - it could just be a non-m module.
+                this.modules[name] = { name: name , initialized : false , url: url };
             }
             this.initModuleOnce(name,callback);
         }.bind(this);
@@ -110,12 +162,12 @@ var m = {
                     return;
                 }
 
-                // the dependency does not have a corresponding
+                // the dependency does not have a corresponding module definition
                 var url = module.dependencies[name].url;
                 this.loadModule(name,url,function() {
                     //console.log( moduleName + " - loaded dependency:" + name );
                     this.initModuleOnce(moduleName,callback);
-                }.bind(this));
+                }.bind(this),module.src);
                 return;
             };
         }
@@ -144,4 +196,3 @@ var m = {
 };
 
 window.addEventListener("load", m.bootstrap.bind(m), false);
-
