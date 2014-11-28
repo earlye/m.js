@@ -56,8 +56,6 @@ var m = {
 
             console.log( "result:" + result );
             return result;
-
-            break;
         }
     },
 

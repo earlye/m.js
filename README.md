@@ -7,6 +7,16 @@ it's kinda pointless aside from the fact that it was fun to
 implement. There's require.js, or http://browserify.org/ out there if
 you're looking for one that's "well supported."
 
+I suppose it has an advantage in that its code is really short, so it's
+pretty easy to figure out what it's doing if the docs aren't enough.
+Uncompressed, it's only 6.8k (excluding a polyfill for document.currentScript).
+Compressed using uglify-js, it drops to 3.7k, and when that runs through
+gzip for compressed HTTP transmission, it drops even further down to 1.3k.
+
+It doesn't include a lot of fluff, either. All it does is allow you to
+manage dependencies. You want ajax, http, or dom assistance? Well, those
+are other modules.
+
 ## How does it work?
 
 In a javascript file, say... app.js, write this:
