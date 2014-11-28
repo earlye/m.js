@@ -9,15 +9,56 @@ you're looking for one that's "well supported."
 
 ## How does it work?
 
-In a javascript file, run this:
+In a javascript file, say... app.js, write this:
 
 ```javascript
 m.module({
-  name : "polyfills",
+  name : "app",
   src  : document.currentScript.src,
   dependencies :
   {
     name : "url,relative-to-this-module"
+  },
+
+  main : function() {
+    // your app's main entry point
   }
 });
 ```
+
+In your HTML, write this:
+
+```html
+<html>
+  <head>
+    <title>Media Inventory</title>
+    <script main="app.js" src="lib/m/m.js"></script>
+  </head>
+  <body>
+  </body>
+</html>
+```
+
+Here's what happens. Your browser loads the HTML. As a part of this
+process, the browser loads and executed m.js. m.js waits until the
+entire document is loaded, and then looks in the document for a
+<script> element with a "main" attribute. When m.js finds that
+element, it loads the script specified by the "main" sttribute, in
+this example, app.js, relative to the html document. m.js registers a
+callback so it knows when app.js is finished loading. While it loads,
+app.js defines a module, which is just an object with "name," "src,"
+and "dependencies" attributes. The "name" attribute is used by
+m.module to save the module in its list of modules. The "src"
+attribute is useful in figuring out where a particular module was
+loaded from. The "dependencies" attribute is a list of other modules,
+and where m.js can look for them, if they aren't already loaded.
+A module may also define a method, "initialize", which m.js will call
+after the module and all of its dependencies are loaded. The "main"
+module can also define a "main" method, which m.js will call after
+the entire dependency tree is loaded.
+
+
+
+
+
+
