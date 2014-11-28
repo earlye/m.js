@@ -42,7 +42,7 @@ In your HTML, write this:
 Here's what happens. Your browser loads the HTML. As a part of this
 process, the browser loads and executed m.js. m.js waits until the
 entire document is loaded, and then looks in the document for a
-<script> element with a "main" attribute. When m.js finds that
+&lt;script&gt; element with a "main" attribute. When m.js finds that
 element, it loads the script specified by the "main" sttribute, in
 this example, app.js, relative to the html document. m.js registers a
 callback so it knows when app.js is finished loading. While it loads,
