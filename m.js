@@ -87,7 +87,7 @@ var m = {
         this.src = element.src;
 
         this.loadModule("polyfills", "polyfills.js?_=" + this._unique++, function() {
-            this.modules.polyfills.initialize();
+            // this.modules.polyfills.initialize(); // Should happen as a result of this.loadModule()
             //console.log( "loading main script" );
             var mainScript = element.attributes['main'].value;
             this.assert( mainScript.length != 0 , "main attribute must not be empty." );
@@ -111,6 +111,7 @@ var m = {
         }
 
         url = this.makeAbsolute(url,relativeToUrl);
+        url += "?_=" + this.getUnique();
         console.log( "loading script:" + url );
 
         var head = document.getElementsByTagName('head');
