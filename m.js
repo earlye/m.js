@@ -11,6 +11,14 @@ var m = {
         }
     },
 
+    addEventListener : function( element , event, fn ) {
+        if (element.attachEvent) {
+            return element.attachEvent('on'+event,fn);
+        } else {
+            return element.addEventListener(event,fn,false);
+        }
+    },
+
     makeAbsolute : function(url,relativeTo) {
         console.log( "makeAbsolute:" + url + " relativeTo:" + relativeTo );
 
@@ -74,7 +82,7 @@ var m = {
     bootstrap: function () {
         console.log( "initializing m.js" );
 
-        this.modules.e = this;
+        this.modules.m = this;
 
         var head = document.getElementsByTagName('head');
         this.assert( head != undefined ,"Must have a <head> tag" );
@@ -86,16 +94,16 @@ var m = {
         var element = elements[0];
         this.src = element.src;
 
-        this.loadModule("polyfills", "polyfills.js?_=" + this._unique++, function() {
+        this.loadModule("polyfills", "polyfills.js" , function() {
             // this.modules.polyfills.initialize(); // Should happen as a result of this.loadModule()
             //console.log( "loading main script" );
             var mainScript = element.attributes['main'].value;
             this.assert( mainScript.length != 0 , "main attribute must not be empty." );
-            this.loadModule("main", mainScript + "?_=" + this.getUnique(), function() {
+            this.loadModule("main", mainScript , function() {
                 this.assert( this.modules.main , "Main module must exist." );
                 this.assert( this.modules.main.initialized , "Main module must be initialized." );
+                //console.log("modules:" + this.modulesJson() );
                 this.assert( this.isCallable(this.modules.main.main) , "Main module must have a main function:" + this.modules.main.main );
-                //console.log("initialized modules prior to running main:" + this.modulesJson() );
                 this.modules.main.main();
             }.bind(this))
         }.bind(this), this.src);
@@ -120,18 +128,25 @@ var m = {
         head = head[0];
 
         var script = document.createElement('script');
+        var done = false;
         script.src=url;
         script.async=true;
-        script.onload=function() {
-            var module = this.modules[name];
-            if (module === undefined) {
-                console.warn( name + ": script did not provide a module definition. " + url );
-                // If the script did not define a module, that's okay - it could just be a non-m module.
-                this.modules[name] = { name: name , initialized : false , url: url };
+        script.onload=script.onreadystatechange=function() {
+            if (!done && (!script.readyState || script.readyState === "loaded" || script.readyState === "complete" )) {
+                done = true;
+                console.log("script loaded");
+                var module = this.modules[name];
+                if (module === undefined) {
+                    console.warn( name + ": script did not provide a module definition. " + url );
+                    // If the script did not define a module, that's okay - it could just be a non-m module.
+                    this.modules[name] = { name: name , initialized : false , url: url };
+                }
+                this.initModuleOnce(name,callback);
             }
-            this.initModuleOnce(name,callback);
         }.bind(this);
-        head.appendChild(script);
+        //        head.appendChild(script);
+        console.log( "inserting script node." );
+        head.insertBefore( script, head.firstChild );
     },
 
     initModuleOnce: function (moduleName,callback) {
@@ -186,12 +201,58 @@ var m = {
     },
 
     module: function( module ) {
-        //console.log( "adding module definition:" + JSON.stringify( module ));
+        console.log( "adding module definition:" + JSON.stringify( module ));
         this.modules[module.name] = module;
     }
-
-
-
 };
 
-window.addEventListener("load", m.bootstrap.bind(m), false);
+// most polyfills should be loaded via polyfills.js. Unfortunately, this one is required
+// to even get that far. Thanks, IE8.
+// http://stackoverflow.com/questions/11054511/how-to-handle-lack-of-javascript-object-bind-method-in-ie-8
+if (!Function.prototype.bind) {
+    Function.prototype.bind = function(oThis) {
+        if (typeof this !== 'function') {
+            // closest thing possible to the ECMAScript 5
+            // internal IsCallable function
+            throw new TypeError('Function.prototype.bind - what is trying to be bound is not callable');
+        }
+
+        var aArgs   = Array.prototype.slice.call(arguments, 1),
+            fToBind = this,
+            fNOP    = function() {},
+            fBound  = function() {
+                return fToBind.apply(this instanceof fNOP && oThis
+                                     ? this
+                                     : oThis,
+                                     aArgs.concat(Array.prototype.slice.call(arguments)));
+            };
+
+        fNOP.prototype = this.prototype;
+        fBound.prototype = new fNOP();
+
+        return fBound;
+    };
+}
+
+// Again, polyfills should normally be loaded via polyfill.js. This one is required to even get that
+// far. Thanks, IE8.
+if (!console) {
+    var console = {
+        _div : null,
+        log : function( msg ) {
+            return;
+            if (!this._div) {
+                this._div = document.body.appendChild(document.createElement('div'));
+                this._div.className = "CONSOLE";
+            }
+            var logEntry = document.createElement('div');
+            logEntry.innerText = msg;
+            this._div.appendChild(logEntry);
+        },
+        error : function( msg ) { this.log("Error:" + msg); },
+        warn : function( msg ) { this.log( "Warn:" + msg); }
+    };
+}
+
+m.addEventListener(window,"load",m.bootstrap.bind(m));
+//window.addEventListener("load", m.bootstrap.bind(m), false);
